@@ -1,0 +1,46 @@
+{
+    "manifest_version": 3,
+    "name": "Billi-Fix1.0",
+    "version": "1.0",
+    "description": "Auto-login and auto course registration for NU Flex portal.",
+    "permissions": [
+      "storage",
+      "scripting",
+      "tabs",
+      "webNavigation" 
+    ],
+    "host_permissions": [
+      "https://flexstudent.nu.edu.pk/*",
+      "https://www.google.com/*"
+    ],
+    "background": {
+      "service_worker": "background.js"
+    },
+    "action": {
+      "default_popup": "popup.html"
+    },
+    "content_scripts": [
+      {
+        "matches": ["https://flexstudent.nu.edu.pk/Login"],
+        "js": ["content-login.js"],
+        "run_at": "document_idle"
+      },
+      {
+        "matches": ["https://flexstudent.nu.edu.pk/*"],
+        "js": ["postlogin.js"],
+        "run_at": "document_idle"
+      },
+      {
+        "matches": ["https://www.google.com/recaptcha/api2/anchor*"],
+        "js": ["content-recaptcha.js"],
+        "all_frames": true,
+        "run_at": "document_idle"
+      },
+      {
+        "matches": ["https://flexstudent.nu.edu.pk/Student/CourseRegistration*"],
+        "js": ["content-registration.js"],
+        "run_at": "document_idle"
+      }
+    ]
+  }
+  

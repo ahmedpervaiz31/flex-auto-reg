@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" type="text/css" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="image-container">
+            <img src="important/ooo.png" class="title-image">
+            <h1 class="title">Flexi-Fixed</h1>
+            <img src="important/ooo.png" class="title-image">
+        </div>
+        <p class="info-text">
+            All data is stored locally on your machine, nothing is shared anywhere!
+        </p>
+
+        <!-- Login Form -->
+        <form id="form">
+            <b><label for="rollNo" class="label">Roll No:</label></b><br>
+            <input type="text" id="rollNo" name="rollNo" maxlength="8" class="input-field"><br>
+            <span id="rollNoError" class="error-message"><b>Invalid Roll No. format!</b></span><br>
+
+            <b><label for="password" class="label">Password:</label></b><br>
+            <input type="password" id="password" name="password" class="input-field"><br><br>
+
+            <input type="submit" value="Save" class="submit-button">
+        </form>
+
+        <br>
+        <button id="deleteData" class="delete-button">Delete stored data</button>
+        <br><br>
+
+        <!-- Refresh interval selector -->
+        <label for="interval" class="label"><b>Refresh Interval (seconds):</b></label><br>
+        <input type="number" id="interval" min="3" value="5" class="input-field"><br><br>
+        <button id="saveInterval" class="submit-button">Save Interval</button>
+
+        <p id="status" class="status-message"></p>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>
