@@ -1,16 +1,3 @@
-function autoRegisterWrapper() {
-    if (typeof chrome !== 'undefined' && chrome.storage?.local) {
-        chrome.storage.local.get(['autoRegisterEnabled'], data => {
-            if (data.autoRegisterEnabled === false) {
-                log('Auto Register is OFF');
-                return;
-            }
-            registerCourses(COURSES_TO_REGISTER);
-        });
-    } else {
-        registerCourses(COURSES_TO_REGISTER);
-    }
-}
 const COURSES_TO_REGISTER = [
     { 
         course_name: "CS4037-Introduction to Coud Computing", 
@@ -38,15 +25,77 @@ const COURSES_TO_REGISTER = [
     }
 ];
 
-
 const DEFAULT_REFRESH_SEC = 5;
 let isProcessing = false;
 const realConfirm = window.confirm;
 let refreshIntervalMs = DEFAULT_REFRESH_SEC * 1000;
 
-/* --- Helpers --- */
 const log = (...args) => console.log("[AutoReg]", ...args);
+
 const normalize = (t) => (t || "").replace(/\s+/g, ' ').trim().toLowerCase();
+
+function findCourseTable() {
+    return document.querySelector("table.searchable-table") ||
+        Array.from(document.querySelectorAll("table"))
+            .find(t => t.querySelector("select") && t.querySelector("input[type='checkbox']"));
+}
+
+function findCourseRow(rows, want) {
+    return rows.find(r => {
+        const codeEl = r.querySelector('.course-code');
+        if (codeEl && normalize(codeEl.textContent) === want) return true;
+        const cells = r.querySelectorAll('td');
+        for (const cell of cells) {
+            const cellText = normalize(cell.textContent);
+            if (cellText === want || cellText.includes(want)) return true;
+        }
+        return normalize(r.innerText).includes(want);
+    });
+}
+
+function findSectionOption(select, preferences) {
+    for (const pref of preferences || []) {
+        const opt = Array.from(select.options).find(o =>
+            extractSection(o.text) === pref.toUpperCase()
+        );
+        if (opt) {
+            const seats = parseSeats(opt.text);
+            if (seats === null || seats > 0) return opt;
+        }
+    }
+    return Array.from(select.options).find(o => {
+        const s = parseSeats(o.text);
+        return s === null || s > 0;
+    });
+}
+
+function findRegisterCheckbox(row) {
+    return row.querySelector('input[type="checkbox"]') ||
+        row.querySelector('input[type="checkbox"].RegisterChkbox');
+}
+
+function findSubmitButton() {
+    return document.getElementById("submit") ||
+        Array.from(document.querySelectorAll("button,input[type=submit]"))
+            .find(b => /submit|register/i.test(b.innerText || b.value));
+}
+
+function checkCourseLimits() {
+    const crslimitEl = document.getElementById('crslimit');
+    const alreadyregEl = document.getElementById('alreadyreg');
+    const selecrslimitEl = document.getElementById('selecrslimit');
+    if (crslimitEl && alreadyregEl && selecrslimitEl) {
+        const maxLimit = parseInt(crslimitEl.textContent.trim()) || 99;
+        const alreadyRegistered = parseInt(alreadyregEl.textContent.trim()) || 0;
+        const currentlySelected = parseInt(selecrslimitEl.textContent.split('+')[0].trim()) || 0;
+        const totalCourses = alreadyRegistered + currentlySelected;
+        return {
+            limitReached: totalCourses >= maxLimit,
+            statusStr: `Status: ${totalCourses}/${maxLimit}`
+        };
+    }
+    return { limitReached: false, statusStr: null };
+}
 
 function dispatchChange(el) {
     if (!el) return;
@@ -56,7 +105,6 @@ function dispatchChange(el) {
 
 function extractSection(text) {
     if (!text) return null;
-    // Matches "Section A", "(A)", "BCS-3A", or "A (17)"
     let m = text.match(/\bsection\s*[:\-]?\s*([A-C])\b/i) || 
             text.match(/[A-Z]-?\d*([A-C])\b/) || 
             text.match(/\b([A-C])\b/);
@@ -71,12 +119,7 @@ function parseSeats(text) {
     return null; 
 }
 
-/* --- Core Logic --- */
-function registerCourses(courses) {
-    if (isProcessing) return;
-    
-    // Flexible registration open checker
-    const pageText = document.body ? document.body.innerText : '';
+function isRegistrationClosed(pageText) {
     const closedPatterns = [
         /offering not complete yet contact academics\.?/i,
         /registration not open yet/i,
@@ -86,41 +129,49 @@ function registerCourses(courses) {
         /not started yet/i,
         /registration.*closed/i
     ];
-    if (closedPatterns.some(re => re.test(pageText))) {
-        log(`⏳ Registration not open yet, refreshing after ${DEFAULT_REFRESH_SEC} seconds...`);
-        isProcessing = false;
+    return closedPatterns.some(re => re.test(pageText));
+}
+
+function handleAutoRefresh() {
+    const pageText = document.body ? document.body.innerText : '';
+    if (isRegistrationClosed(pageText)) {
+        log(`Registration not open yet, refreshing after ${refreshIntervalMs / 1000} seconds...`);
         setTimeout(() => {
             location.reload();
         }, refreshIntervalMs);
+        return true;
+    }
+    return false;
+}
+
+function autoRegisterWrapper() {
+    if (typeof chrome !== 'undefined' && chrome.storage?.local) {
+        chrome.storage.local.get(['autoRegisterEnabled'], data => {
+            if (data.autoRegisterEnabled === false) {
+                log('Auto Register is OFF');
+                return;
+            }
+            registerCourses(COURSES_TO_REGISTER);
+        });
+    } else {
+        registerCourses(COURSES_TO_REGISTER);
+    }
+}
+
+function registerCourses(courses) {
+    if (isProcessing) return;
+
+    const { limitReached, statusStr } = checkCourseLimits();
+    if (statusStr) log(statusStr);
+    if (limitReached) {
+        log('Limit reached');
+        isProcessing = false;
         return;
     }
 
-    // FIX 3: Check course limits
-    const crslimitEl = document.getElementById('crslimit');
-    const alreadyregEl = document.getElementById('alreadyreg');
-    const selecrslimitEl = document.getElementById('selecrslimit');
-    
-    if (crslimitEl && alreadyregEl && selecrslimitEl) {
-        const maxLimit = parseInt(crslimitEl.textContent.trim()) || 99;
-        const alreadyRegistered = parseInt(alreadyregEl.textContent.trim()) || 0;
-        const currentlySelected = parseInt(selecrslimitEl.textContent.split('+')[0].trim()) || 0;
-        const totalCourses = alreadyRegistered + currentlySelected;
-        
-        log(`📊 Status: ${totalCourses}/${maxLimit}`);
-        
-        if (totalCourses >= maxLimit) {
-            log(`Limit reached`);
-            isProcessing = false;
-            return;
-        }
-    }
-    
-    const table = document.querySelector("table.searchable-table") || 
-                  Array.from(document.querySelectorAll("table"))
-                      .find(t => t.querySelector("select") && t.querySelector("input[type='checkbox']"));
-    
+    const table = findCourseTable();
     if (!table) {
-        log("❌ Table not found");
+        log('Table not found');
         return;
     }
 
@@ -130,86 +181,30 @@ function registerCourses(courses) {
 
     courses.forEach(course => {
         const want = normalize(course.course_name);
-        
-        // ✅ SAFER: Try multiple methods to find the course
-        const row = rows.find(r => {
-            // Method 1: Look for .course-code element (most specific)
-            const codeEl = r.querySelector('.course-code');
-            if (codeEl && normalize(codeEl.textContent) === want) {
-                return true;
-            }
-            
-            // Method 2: Check first td or any td with course-like content
-            const cells = r.querySelectorAll('td');
-            for (const cell of cells) {
-                const cellText = normalize(cell.textContent);
-                // Match course code pattern like "CS4037-Introduction to Cloud Computing"
-                if (cellText === want || cellText.includes(want)) {
-                    return true;
-                }
-            }
-            
-            // Method 3: Fallback to full row text (original method)
-            return normalize(r.innerText).includes(want);
-        });
-        
+        const row = findCourseRow(rows, want);
         if (!row) {
             log(`Not found: ${course.course_name}`);
             return;
         }
-
         const select = row.querySelector('select') || row.querySelector('select.section');
-        const checkbox = row.querySelector('input[type="checkbox"]') || 
-                        row.querySelector('input[type="checkbox"].RegisterChkbox');
-        
+        const checkbox = findRegisterCheckbox(row);
         if (!select || !checkbox) {
             log(`Missing controls for ${course.course_name}`);
             return;
         }
-
-        let chosen = null;
-        
-        // Try preferences
-        for (const pref of course.section_preferences || []) {
-            const opt = Array.from(select.options).find(o => 
-                extractSection(o.text) === pref.toUpperCase()
-            );
-            if (opt) {
-                const seats = parseSeats(opt.text);
-                if (seats === null || seats > 0) {
-                    chosen = opt;
-                    break;
-                }
-            }
-        }
-        
-        // Fallback
-        if (!chosen) {
-            chosen = Array.from(select.options).find(o => {
-                const s = parseSeats(o.text);
-                return s === null || s > 0;
-            });
-        }
-
+        const chosen = findSectionOption(select, course.section_preferences);
         if (chosen) {
             select.value = chosen.value;
             dispatchChange(select);
-            
-            // FIX 2: Capture section ID (try both 'id' and 'Id')
-            const sectionId = chosen.getAttribute('id') || 
-                            chosen.getAttribute('Id') || 
-                            chosen.id;
-            
+            const sectionId = chosen.getAttribute('id') || chosen.getAttribute('Id') || chosen.id;
             if (sectionId) {
                 checkbox.setAttribute('value', sectionId);
-                checkbox.value = sectionId; // Also set value property
+                checkbox.value = sectionId;
             }
-            
             if (!checkbox.checked) {
                 checkbox.checked = true;
                 dispatchChange(checkbox);
             }
-            
             anyMarked = true;
             log(`${course.course_name} -> ${chosen.text}`);
         } else {
@@ -219,12 +214,9 @@ function registerCourses(courses) {
 
     if (anyMarked) {
         window.confirm = () => true;
-        const btn = document.getElementById("submit") || 
-                    Array.from(document.querySelectorAll("button,input[type=submit]"))
-                    .find(b => /submit|register/i.test(b.innerText || b.value));
-        
+        const btn = findSubmitButton();
         if (btn) {
-            log("Submitting...");
+            log('Submitting...');
             btn.click();
         }
         setTimeout(() => { window.confirm = realConfirm; }, 2000);
@@ -232,12 +224,9 @@ function registerCourses(courses) {
     isProcessing = false;
 }
 
-/* --- Initialization Fix --- */
 function init() {
-    // Check Chrome storage for the saved interval, otherwise use default
     if (typeof chrome !== 'undefined' && chrome.storage?.local) {
         chrome.storage.local.get(['refreshInterval'], data => {
-            // Convert seconds from storage to milliseconds
             const savedInterval = data.refreshInterval ? data.refreshInterval * 1000 : DEFAULT_REFRESH_SEC * 1000;
             start(savedInterval);
         });
@@ -248,12 +237,14 @@ function init() {
 }
 
 function start(interval) {
-    // Assign to the existing global variable refreshIntervalMs
     refreshIntervalMs = Math.max(interval, 3000); 
     log("Watcher active. Interval:", refreshIntervalMs, "ms");
     
-    // Use a single controlled loop instead of overlapping setInterval/MutationObserver
     const runLoop = () => {
+        if (handleAutoRefresh()) {
+            setTimeout(runLoop, refreshIntervalMs);
+            return;
+        }
         if (!isProcessing) {
             autoRegisterWrapper();
         }
