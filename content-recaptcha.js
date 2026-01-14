@@ -1,5 +1,5 @@
 (function solveRecaptcha() {
-    console.log("🔑 content-recaptcha.js loaded in:", window.location.href);
+    console.log("content-recaptcha.js loaded in:", window.location.href);
   
     var solved = false;
     const recaptchaStatus = "#recaptcha-accessible-status";
@@ -41,7 +41,7 @@
               qSelector(recaptchaStatus).innerText != recaptchaInitialStatus
             ) {
               solved = true;
-              console.log("✅ SOLVED CAPTCHA");
+              console.log("SOLVED CAPTCHA");
               clearInterval(captchaInterval);
               chrome.storage.local.set({ solved: solved });
               solved = false;

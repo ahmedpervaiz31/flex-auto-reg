@@ -1,3 +1,16 @@
+function autoRegisterWrapper() {
+    if (typeof chrome !== 'undefined' && chrome.storage?.local) {
+        chrome.storage.local.get(['autoRegisterEnabled'], data => {
+            if (data.autoRegisterEnabled === false) {
+                log('Auto Register is OFF');
+                return;
+            }
+            registerCourses(COURSES_TO_REGISTER);
+        });
+    } else {
+        registerCourses(COURSES_TO_REGISTER);
+    }
+}
 const COURSES_TO_REGISTER = [
     { 
         course_name: "CS4037-Introduction to Coud Computing", 
@@ -96,7 +109,7 @@ function registerCourses(courses) {
         log(`📊 Status: ${totalCourses}/${maxLimit}`);
         
         if (totalCourses >= maxLimit) {
-            log(`🚫 Limit reached`);
+            log(`Limit reached`);
             isProcessing = false;
             return;
         }
@@ -141,7 +154,7 @@ function registerCourses(courses) {
         });
         
         if (!row) {
-            log(`❌ Not found: ${course.course_name}`);
+            log(`Not found: ${course.course_name}`);
             return;
         }
 
@@ -150,7 +163,7 @@ function registerCourses(courses) {
                         row.querySelector('input[type="checkbox"].RegisterChkbox');
         
         if (!select || !checkbox) {
-            log(`⚠️ Missing controls for ${course.course_name}`);
+            log(`Missing controls for ${course.course_name}`);
             return;
         }
 
@@ -198,9 +211,9 @@ function registerCourses(courses) {
             }
             
             anyMarked = true;
-            log(`✅ ${course.course_name} -> ${chosen.text}`);
+            log(`${course.course_name} -> ${chosen.text}`);
         } else {
-            log(`⚠️ No available sections for ${course.course_name}`);
+            log(`No available sections for ${course.course_name}`);
         }
     });
 
@@ -211,7 +224,7 @@ function registerCourses(courses) {
                     .find(b => /submit|register/i.test(b.innerText || b.value));
         
         if (btn) {
-            log("🚀 Submitting...");
+            log("Submitting...");
             btn.click();
         }
         setTimeout(() => { window.confirm = realConfirm; }, 2000);
@@ -219,7 +232,6 @@ function registerCourses(courses) {
     isProcessing = false;
 }
 
-/* --- Initialization --- */
 /* --- Initialization Fix --- */
 function init() {
     // Check Chrome storage for the saved interval, otherwise use default
@@ -243,11 +255,10 @@ function start(interval) {
     // Use a single controlled loop instead of overlapping setInterval/MutationObserver
     const runLoop = () => {
         if (!isProcessing) {
-            registerCourses(COURSES_TO_REGISTER);
+            autoRegisterWrapper();
         }
         setTimeout(runLoop, refreshIntervalMs);
     };
-    
     runLoop();
 }
 

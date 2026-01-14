@@ -1,4 +1,4 @@
-console.log("Flexi-Fixed login content script loaded ✅");
+console.log("Flexi-Fixed login content script loaded");
 
 function fillForm(rollNo, password) {
     const rollNoInput = document.getElementById('m_inputmask_4');
@@ -14,7 +14,7 @@ function fillForm(rollNo, password) {
         passwordInput.dispatchEvent(new Event('input', { bubbles: true }));
         rememberMeCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
 
-        console.log("Login form auto-filled ✅");
+        console.log("Login form auto-filled");
 
         chrome.storage.local.set({ 'formFilled': true });
     }
@@ -28,7 +28,7 @@ chrome.storage.local.get(['rollNo', 'password'], function (data) {
         setTimeout(() => {
             const signInButton = document.getElementById('m_login_signin_submit');
             if (signInButton) {
-                console.log("✅ Sign in button found, clicking...");
+                console.log("Sign in button found, clicking...");
                 signInButton.click();
                
                 // set flag that we just logged in

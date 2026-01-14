@@ -31,6 +31,11 @@
         "run_at": "document_idle"
       },
       {
+        "matches": ["https://flexstudent.nu.edu.pk/*"],
+        "js": ["content-error-refresh.js"],
+        "run_at": "document_idle"
+      },
+      {
         "matches": ["https://www.google.com/recaptcha/api2/anchor*"],
         "js": ["content-recaptcha.js"],
         "all_frames": true,
