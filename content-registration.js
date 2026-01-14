@@ -62,11 +62,28 @@ function parseSeats(text) {
 function registerCourses(courses) {
     if (isProcessing) return;
     
+<<<<<<< HEAD
     const closedAlert = document.querySelector('.alert-danger');
     if (closedAlert && closedAlert.textContent.includes('not active yet')) {
         log("⏳ Registration not open yet, waiting...");
         isProcessing = false;
         
+=======
+    // Flexible registration open checker
+    const pageText = document.body ? document.body.innerText : '';
+    const closedPatterns = [
+        /offering not complete yet contact academics\.?/i,
+        /registration not open yet/i,
+        /registration.*not active yet/i,
+        /registration.*not started/i,
+        /not active yet/i,
+        /not started yet/i,
+        /registration.*closed/i
+    ];
+    if (closedPatterns.some(re => re.test(pageText))) {
+        log(`⏳ Registration not open yet, refreshing after ${DEFAULT_REFRESH_SEC} seconds...`);
+        isProcessing = false;
+>>>>>>> 65764a3 (updated ui)
         setTimeout(() => {
             location.reload();
         }, refreshIntervalMs);

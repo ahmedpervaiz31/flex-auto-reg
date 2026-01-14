@@ -1,6 +1,10 @@
 {
     "manifest_version": 3,
+<<<<<<< HEAD
     "name": "Billi-Fix1.0",
+=======
+    "name": "Flex-Fix",
+>>>>>>> 65764a3 (updated ui)
     "version": "1.0",
     "description": "Auto-login and auto course registration for NU Flex portal.",
     "permissions": [
